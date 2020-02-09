@@ -128,6 +128,27 @@ absolute pathname, or a path-relative namestring)."
 PDDL operator definitions.")
   )
 
+(defgeneric pddl-method-p (domain sexpr)
+  (:method ((domain domain) obj)
+    (declare (ignorable domain obj))
+    nil)
+  (:method ((domain simple-pddl-domain) (sexpr list))
+    (declare (ignorable domain))
+    (or (eq (first sexpr) :pddl-method)
+        (call-next-method))))
+
+
+(defmethod method-p ((domain simple-pddl-domain) (sexpr list))
+  (or (pddl-method-p domain sexpr)
+      (call-next-method)))
+
+(defmethod method-name ((domain simple-pddl-domain) (sexpr list))
+  (or 
+   (and (pddl-method-p domain sexpr)
+        (third sexpr))
+   (call-next-method)))
+
+
 (defclass negative-preconditions-mixin ()
   ()
   )
@@ -723,6 +744,11 @@ two values."
          (task-net (if (symbolp (third method)) (fifth method) (fourth method)))
          ;; FIXME: later we should check singleton variables...
          #+ignore var-table)
+    (when (gethash method-name *all-method-names* nil)
+      (let ((new-name (gensym (symbol-name method-name))))
+        (warn "Non-unique method name ~S: renaming to ~S" method-name new-name)
+        (setf method-name new-name)))
+    (setf (gethash method-name *all-method-names*) t)
     (labels ((process-task-list (tasks)
                (cond
                  ((null tasks) (list :ordered (list :task '!!inop)))
