@@ -37,7 +37,7 @@ tree, with causal links, unless NO-DEPENDENCIES is non-NIL."
          (start-real-time (get-internal-real-time))
          (*plan-tree* nil)
          (*plans-found* nil)
-         (*enhanced-plan-tree* repairable)
+         (*enhanced-plan-tree* plan-tree)
          (*no-dependencies* no-dependencies)
          (*include-rationale* rationale)
          (*record-dependencies-p* (and *enhanced-plan-tree* (not *no-dependencies*)))
@@ -335,7 +335,8 @@ trigger backtracking."
               (let ((task-node (plan-tree:find-task-in-tree
                                 current-task plan-tree-lookup)))
                 
-                (push (record-node-expansion task-node task-expansion plan-tree-lookup)
+                (push (record-node-expansion task-node task-expansion plan-tree-lookup
+                                             :chosen-method (method-name domain method))
                       backtrack-stack)))
             (setf alternatives
                   ;; FIXME: Why is the version for recording dependencies not
@@ -389,13 +390,13 @@ trigger backtracking."
 
 ;;; record the expansion of a tree node by rewriting its task.  Return
 ;;; the backtrack stack entry needed to undo the transformation.
-(defun record-node-expansion (tree-node expanded-task hash-table &optional method-name)
+(defun record-node-expansion (tree-node expanded-task hash-table &key chosen-method)
   (assert expanded-task)
   (setf (plan-tree:tree-node-expanded-task tree-node)
         expanded-task)
-  (when method-name
-    (assert (plan-tree::complex-tree-node-p tree-node))
-    (setf (plan-tree::complex-tree-node-method-name tree-node) method-name))
+  (when chosen-method
+    (setf (plan-tree:complex-tree-node-chosen-method tree-node)
+          chosen-method))
   (setf (gethash expanded-task hash-table) tree-node)
   (make-record-expansion tree-node))
 
